@@ -1,11 +1,17 @@
-import React, { useState, useEffect, useReducer } from 'react';
+import React, {  useState, useEffect, useReducer, useRef, useMemo } from 'react';
 import axios from 'axios';
+import List from './List'
+
+
 
 const todo = props => {
-    const [todoName, setTodoName] = useState('');
-    const [submittedTodo, setSubmittedTodo] = useState(null);
+    const [inputIsValid, setInputIsValid] = useState(false)
+    // const [todoName, setTodoName] = useState('');
+    // const [submittedTodo, setSubmittedTodo] = useState(null);
     // const [todoList, setTodoList] = useState([])
-    
+    const todoInputRef = useRef();
+
+
     const todoListReducer = (state, action) => {
         switch(action.type) {
             case 'ADD':
@@ -40,37 +46,45 @@ const todo = props => {
         console.log(event.clientX, event.clientY)
     }
 
+    const inputValidationHandler = event => {
+        if (event.target.value.trim() === '') {
+            setInputIsValid(false);
+        }
+        else {
+            setInputIsValid(true)
+        }
+    }
  
 
-    useEffect(() => {
-        document.addEventListener('mousemove', mouseMoveHandler)
-        return () => {
-            document.removeEventListener('mousemove', mouseMoveHandler)
-        }
-    }, [])
+    // useEffect(() => {
+    //     document.addEventListener('mousemove', mouseMoveHandler)
+    //     return () => {
+    //         document.removeEventListener('mousemove', mouseMoveHandler)
+    //     }
+    // }, [])
 
-    useEffect(
-        () => {
-            if(submittedTodo) {
-        dispatch({type: 'ADD', payload: submittedTodo});
-            }
-    },
-    [submittedTodo]
-    );
+    // useEffect(
+    //     () => {
+    //         if(submittedTodo) {
+    //     dispatch({type: 'ADD', payload: submittedTodo});
+    //         }
+    // },
+    // [submittedTodo]
+    // );
 
-    const inputChangeHandler = (event) => {
-        setTodoName(event.target.value)
-    };
+    // const inputChangeHandler = (event) => {
+    //     setTodoName(event.target.value)
+    // };
 
     
 
     const todoAddHander = () => {
-        
+        const todoName = todoInputRef.current.value;
         axios.post('https://hooks-726f2.firebaseio.com/todos.json', {name: todoName})
         .then(res => {
             setTimeout(() => {
             const todoItem = {id: res.data.name, name: todoName}
-            setSubmittedTodo(todoItem);
+            dispatch({type: 'ADD', payload: todoItem});
         }, 3000)
     })
         .catch(err => {
@@ -78,20 +92,25 @@ const todo = props => {
         })
     }
 
+    const todoRemoveHandler = todoId => {
+        axios
+        .delete(`https://hooks-726f2.firebaseio.com/todos/${todoId}.json`)
+        .then(res => {
+            dispatch({type: 'REMOVE', payload: todoId})
+        }).catch(err => console.log(err))
+    }
 
     return <React.Fragment>
         <input 
             type='text' 
             placeholder='Todo' 
-            onChange={inputChangeHandler} 
-            value={todoName}
+            ref={todoInputRef}
+            onChange={inputValidationHandler}
+            style={{backgroundColor: inputIsValid ? 'transparent' : 'red'}}
         />
-        <button type='button' onClick={todoAddHander}>Add</button>
-        <ul>
-            {todoList.map(todo => (
-            <li key={todo.id}>{todo.name}</li>
-            ))}
-        </ul>
+        <button type='button' onClick={todoAddHander}>
+            Add</button>
+       {useMemo(() => <List items={todoList} onClick={todoRemoveHandler}/>, [todoList])}
     </React.Fragment>
 }
 
